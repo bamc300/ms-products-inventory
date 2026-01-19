@@ -1,0 +1,94 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:-db_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-db_admin_password}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER:-db_admin}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - inventory-net
+
+  products-service:
+    build: ./services/ms-products
+    container_name: products-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres
+      DB_USER: products_user
+      DB_PASSWORD: products_password_change_me
+      APPLICATION_SECURITY_JWT_SECRET_KEY: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - inventory-net
+
+  inventory-service:
+    build: ./services/ms-inventory
+    container_name: inventory-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres
+      DB_USER: inventory_user
+      DB_PASSWORD: inventory_password_change_me
+      APPLICATION_SECURITY_JWT_SECRET_KEY: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      PRODUCTS_BASE_URL: http://products-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      products-service:
+        condition: service_started
+    networks:
+      - inventory-net
+
+  api-gateway:
+    image: nginx:1.25-alpine
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      products-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+    networks:
+      - inventory-net
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - inventory-net
+
+networks:
+  inventory-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
