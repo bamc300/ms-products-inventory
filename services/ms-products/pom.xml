@@ -15,6 +15,14 @@
     <description>Product Microservice</description>
     <properties>
         <java.version>21</java.version>
+        <sonar.coverage.exclusions>
+            **/application/dto/**,
+            **/domain/model/**,
+            **/domain/exception/**,
+            **/infrastructure/adapter/config/**,
+            **/infrastructure/adapter/out/persistence/entity/**,
+            **/MsProductsApplication.java
+        </sonar.coverage.exclusions>
     </properties>
     <dependencies>
         <dependency>
