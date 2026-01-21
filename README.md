@@ -142,6 +142,75 @@ El servicio de SonarQube se inicia automáticamente con `docker-compose`.
 4. **Endpoint de Compra en Inventario**: Se ubicó en el microservicio de Inventario porque es la "Fuente de Verdad" del stock. La compra es una operación que modifica principalmente el estado del inventario (resta stock). Validar el producto es una pre-condición. Esto respeta el principio de **Single Responsibility**.
 5. **API Gateway**: Se incluye un gateway liviano (Nginx) para enrutar `/products/*` hacia `ms-products` y `/inventory/*` hacia `ms-inventory`, manteniendo los microservicios independientes.
 
+## Diagrama de Arquitectura
+
+A continuación se presenta la arquitectura lógica del sistema desplegado, mostrando la separación de capas (Pública, Privada, Datos) y los componentes principales.
+
+```mermaid
+graph TD
+    %% Estilos
+    classDef user fill:#0d47a1,stroke:#000,stroke-width:2px,color:#fff;
+    classDef public fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef private fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef data fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef ext fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+
+    User((Usuario / Cliente)):::user
+
+    subgraph "Docker Host / Cluster"
+        
+        subgraph "Capa Pública (Acceso)"
+            Nginx[("🦁 Nginx Gateway<br/>(Load Balancer & Routing)<br/>Port: 8080")]:::public
+        end
+
+        subgraph "Capa Privada (Aplicación)"
+            subgraph "ms-products"
+                ProdService["📦 Product Service<br/>(Spring Boot 3)"]:::private
+                ProdSec["🔐 JWT Filter"]:::private
+            end
+
+            subgraph "ms-inventory"
+                InvService["📝 Inventory Service<br/>(Spring Boot 3)"]:::private
+                InvSec["🔐 JWT Filter"]:::private
+            end
+        end
+
+        subgraph "Capa de Datos (Persistencia)"
+            Postgres[("🐘 PostgreSQL<br/>(Single Instance)")]:::data
+            DB1[("Products DB")]:::data
+            DB2[("Inventory DB")]:::data
+        end
+    end
+
+    subgraph "CI/CD & Source"
+        Git["🐙 GitHub<br/>(Repo)"]:::ext
+        Maven["🛠️ Maven<br/>(Build & Test)"]:::ext
+    end
+
+    %% Conexiones
+    User -->|HTTP JSON:API<br/>Bearer Token| Nginx
+    
+    Nginx -->|"/products/*"| ProdService
+    Nginx -->|"/inventory/*"| InvService
+    Nginx -->|"/purchases"| InvService
+
+    %% Comunicación entre microservicios
+    InvService -->|"HTTP Sync Client<br/>(Validar Producto)"| ProdService
+
+    %% Conexiones a BD
+    ProdService -->|JPA/Hibernate| DB1
+    InvService -->|JPA/Hibernate| DB2
+    
+    DB1 -.-> Postgres
+    DB2 -.-> Postgres
+
+    %% CI/CD Flow
+    Git -.-> Maven
+    Maven -.->|"Build Image"| ProdService
+    Maven -.->|"Build Image"| InvService
+
+```
+
 ## Flujo de Compra
 
 1. **Cliente** envía `POST /api/v1/purchases` a `ms-inventory`.
