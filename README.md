@@ -61,25 +61,18 @@ com.linktic.<service>
    - **Health Inventory**: http://localhost:8080/inventory/actuator/health
 
 ### Seguridad y Pruebas
-- **JWT Authentication**: El sistema utiliza JSON Web Tokens (JWT) para la autenticación.
-- **Obtención de Token**:
-  1. Realizar una petición `POST` a `/api/v1/auth/authenticate` (vía Gateway) o `/api/v1/auth/authenticate` (directo a ms-products).
-  2. Body:
-     ```json
-     {
-       "username": "admin",
-       "password": "password"
-     }
-     ```
-  3. La respuesta incluirá un `token`.
+- **API Key Authentication**: El sistema utiliza API Keys para la autenticación entre servicios y clientes autorizados.
+- **Configuración**:
+  - La API Key se configura mediante la variable de entorno `API_KEY` (o en `application.yml`).
+  - Valor por defecto (dev): `inventory-microservices-api-key-12345`
 
-- **Uso del Token**:
-  - Incluir el header `Authorization: Bearer <token>` en todas las peticiones a endpoints protegidos.
+- **Uso de la API Key**:
+  - Incluir el header `X-API-Key: <api-key>` en todas las peticiones a endpoints protegidos.
 
 - **Swagger UI**:
   1. Abrir Swagger (ej. http://localhost:8080/products/swagger-ui/index.html).
   2. Hacer clic en el botón verde **Authorize** (arriba a la derecha).
-  3. Ingresar el valor del token JWT (sin el prefijo "Bearer ", Swagger lo suele añadir o especificar si se requiere). *Nota: En esta configuración, ingresa solo el token.*
+  3. Ingresar el valor de la API Key (ej. `inventory-microservices-api-key-12345`).
   4. Clic en **Authorize** y luego **Close**.
   5. Ahora todos los requests "Try it out" enviarán automáticamente el header.
 

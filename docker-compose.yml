@@ -28,7 +28,7 @@ services:
       DB_HOST: postgres
       DB_USER: products_user
       DB_PASSWORD: products_password_change_me
-      APPLICATION_SECURITY_JWT_SECRET_KEY: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      APPLICATION_SECURITY_API_KEY: inventory-microservices-api-key-12345
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,7 +44,7 @@ services:
       DB_HOST: postgres
       DB_USER: inventory_user
       DB_PASSWORD: inventory_password_change_me
-      APPLICATION_SECURITY_JWT_SECRET_KEY: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      APPLICATION_SECURITY_API_KEY: inventory-microservices-api-key-12345
       PRODUCTS_BASE_URL: http://products-service:8081
     depends_on:
       postgres:

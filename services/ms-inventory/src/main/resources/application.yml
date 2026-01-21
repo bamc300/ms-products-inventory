@@ -18,6 +18,10 @@ spring:
   jackson:
     property-naming-strategy: KEBAB_CASE
 
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%15.15t] [%X{requestId}] %-40.40logger{39} : %m%n"
+
 products:
   base-url: ${PRODUCTS_BASE_URL:http://localhost:8081}
 
@@ -29,6 +33,4 @@ management:
 
 application:
   security:
-    jwt:
-      secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-      expiration: 86400000
+    api-key: inventory-microservices-api-key-12345

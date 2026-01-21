@@ -13,7 +13,7 @@ public class InventoryDtoMapper {
     if (inventory == null)
       return null;
     return InventoryResponseDto.builder()
-        .data(InventoryResponseDto.InventoryData.builder().type("inventory")
+        .data(InventoryResponseDto.InventoryData.builder().type("stocks")
             .id(String.valueOf(inventory.getProductId()))
             .attributes(InventoryResponseDto.InventoryAttributes.builder()
                 .cantidad(inventory.getCantidad()).build())

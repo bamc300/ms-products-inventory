@@ -22,7 +22,7 @@ class InventoryDtoMapperTest {
 
     InventoryResponseDto dto = mapper.toResponse(inventory);
 
-    assertEquals("inventory", dto.getData().getType());
+    assertEquals("stocks", dto.getData().getType());
     assertEquals(productId.toString(), dto.getData().getId());
     assertEquals(10, dto.getData().getAttributes().getCantidad());
   }

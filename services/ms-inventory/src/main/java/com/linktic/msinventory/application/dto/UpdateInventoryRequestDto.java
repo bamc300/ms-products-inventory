@@ -21,6 +21,7 @@ public class UpdateInventoryRequestDto {
   @AllArgsConstructor
   @NoArgsConstructor
   public static class InventoryUpdateData {
+    @io.swagger.v3.oas.annotations.media.Schema(description = "Tipo de recurso", example = "stocks", hidden = true)
     private String type;
 
     @Valid

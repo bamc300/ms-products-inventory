@@ -19,39 +19,27 @@ import java.util.UUID;
 public class ProductClientAdapter implements ProductClientPort {
 
   private final RestClient restClient;
+  private final String apiKey;
   private static final int MAX_RETRIES = 2;
 
-  public ProductClientAdapter(@Value("${products.base-url}") String baseUrl) {
+  public ProductClientAdapter(@Value("${products.base-url}") String baseUrl,
+      @Value("${application.security.api-key}") String apiKey) {
     SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(2000);
     factory.setReadTimeout(2000);
 
     this.restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
-  }
-
-  private String getBearerToken() {
-    ServletRequestAttributes attributes =
-        (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-    if (attributes != null) {
-      String authHeader = attributes.getRequest().getHeader("Authorization");
-      if (authHeader != null && authHeader.startsWith("Bearer ")) {
-        return authHeader;
-      }
-    }
-    return null;
+    this.apiKey = apiKey;
   }
 
   @Override
   public Optional<ProductDto> getProductById(UUID id) {
-    String tokenHeader = getBearerToken();
     int attempt = 0;
     while (attempt <= MAX_RETRIES) {
       try {
         RestClient.RequestHeadersSpec<?> request =
             restClient.get().uri("/api/v1/products/{id}", id);
-        if (tokenHeader != null) {
-          request.header("Authorization", tokenHeader);
-        }
+        request.header("X-API-Key", apiKey);
 
         return Optional.ofNullable(request.retrieve().body(ProductResponseWrapper.class))
             .map(wrapper -> ProductDto.builder().id(UUID.fromString(wrapper.getData().getId()))

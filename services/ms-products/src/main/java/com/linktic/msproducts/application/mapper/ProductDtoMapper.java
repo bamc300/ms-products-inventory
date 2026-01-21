@@ -19,7 +19,7 @@ public class ProductDtoMapper {
 
         public ProductResponseDto toResponse(Product product) {
                 return ProductResponseDto.builder().data(ProductResponseDto.ProductData.builder()
-                                .type("product")
+                                .type("products")
                                 .id(product.getId() != null ? product.getId().toString() : null)
                                 .attributes(ProductResponseDto.ProductAttributes.builder()
                                                 .nombre(product.getNombre())
