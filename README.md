@@ -133,7 +133,8 @@ El servicio de SonarQube se inicia automáticamente con `docker-compose`.
 2. **Comunicación**: HTTP síncrono utilizando `RestClient` (Spring 6). Se implementó un mecanismo de **Retry** (2 intentos) y **Timeout** (2s) para resiliencia en la llamada de Inventario a Productos.
 3. **Seguridad**: Autenticación mediante **API Key**. Se requiere el header `X-API-Key` con un valor válido para acceder a los endpoints protegidos.
 4. **Endpoint de Compra en Inventario**: Se ubicó en el microservicio de Inventario porque es la "Fuente de Verdad" del stock. La compra es una operación que modifica principalmente el estado del inventario (resta stock). Validar el producto es una pre-condición. Esto respeta el principio de **Single Responsibility**.
-5. **API Gateway**: Se incluye un gateway liviano (Nginx) para enrutar `/products/*` hacia `ms-products` y `/inventory/*` hacia `ms-inventory`, manteniendo los microservicios independientes.
+5. **Historial y Eventos**: Se implementó un registro de auditoría de compras y un sistema de eventos de dominio (`InventoryChangedEvent`) para desacoplar la lógica de actualización de stock de otras posibles reacciones futuras (notificaciones, reportes, etc.).
+6. **API Gateway**: Se incluye un gateway liviano (Nginx) para enrutar `/products/*` hacia `ms-products` y `/inventory/*` hacia `ms-inventory`, manteniendo los microservicios independientes.
 
 ## Diagrama de Arquitectura
 
