@@ -1,11 +1,14 @@
 package com.linktic.msinventory.application.usecase;
 
+import com.linktic.msinventory.domain.event.InventoryChangedEvent;
 import com.linktic.msinventory.domain.exception.InsufficientStockException;
 import com.linktic.msinventory.domain.exception.ProductNotFoundException;
 import com.linktic.msinventory.domain.model.Inventory;
 import com.linktic.msinventory.domain.model.Purchase;
+import com.linktic.msinventory.domain.port.out.EventPublisherPort;
 import com.linktic.msinventory.domain.port.out.InventoryRepositoryPort;
 import com.linktic.msinventory.domain.port.out.ProductClientPort;
+import com.linktic.msinventory.domain.port.out.PurchaseRepositoryPort;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +31,12 @@ class PurchaseUseCaseTest {
   @Mock
   private ProductClientPort productClient;
 
+  @Mock
+  private PurchaseRepositoryPort purchaseRepository;
+
+  @Mock
+  private EventPublisherPort eventPublisher;
+
   @InjectMocks
   private PurchaseUseCaseImpl purchaseUseCase;
 
@@ -43,12 +52,16 @@ class PurchaseUseCaseTest {
     when(inventoryRepository.findByProductId(productId))
         .thenReturn(Optional.of(Inventory.builder().productId(productId).cantidad(10).build()));
 
+    when(purchaseRepository.save(any(Purchase.class))).thenAnswer(i -> i.getArgument(0));
+
     Purchase result = purchaseUseCase.purchase(productId, quantity);
 
     assertNotNull(result);
     assertEquals(productId, result.getProductId());
     assertEquals(quantity, result.getCantidadComprada());
     verify(inventoryRepository).save(any(Inventory.class));
+    verify(purchaseRepository).save(any(Purchase.class));
+    verify(eventPublisher).publish(any(InventoryChangedEvent.class));
   }
 
   @Test
