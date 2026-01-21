@@ -1,0 +1,25 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: ms-products
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/products_db
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  jackson:
+    property-naming-strategy: KEBAB_CASE
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
