@@ -27,30 +27,6 @@ com.linktic.<service>
 │   └── <Application> # Main Class
 ```
 
-## Flujo de Trabajo Git Flow (Simulación)
-
-Este proyecto incluye una configuración automatizada para simular y demostrar un flujo de trabajo **Git Flow** completo.
-
-### Estructura de Ramas
-- **main**: Producción (Releases estables, tags vX.Y.Z).
-- **dev**: Integración Continua (Rama base para desarrollo).
-- **feature/**: Nuevas funcionalidades (ej. `feature/endpoint_20260119_1`).
-- **fix/**, **hotfix/**, **doc/**, **test/**: Tipos de ramas de soporte.
-
-### Script de Simulación
-El script `simulate_gitflow.sh` permite generar un historial de commits simulado que demuestra:
-1.  Creación de ramas `feature` desde `dev`.
-2.  Commits con fechas históricas (simulando días de trabajo).
-3.  Merges a `dev` (Pull Requests simulados).
-4.  Release final a `main` con Tag semántico (`v1.0.0`).
-
-**Para ejecutar la simulación:**
-```bash
-./simulate_gitflow.sh
-```
-
-El script generará archivos de simulación en `services/ms-products/src/main/java/com/linktic/msproducts/simulation/`.
-
 ## Ejecución
 
 ### Requisitos
@@ -162,9 +138,9 @@ El servicio de SonarQube se inicia automáticamente con `docker-compose`.
 
 1. **Base de Datos**: Se utiliza **PostgreSQL** ejecutado en Docker. Se eligió por robustez y consistencia de datos. Cada microservicio tiene su propio esquema/base de datos lógica (`products_db`, `inventory_db`) aunque comparten instancia por simplicidad en docker-compose.
 2. **Comunicación**: HTTP síncrono utilizando `RestClient` (Spring 6). Se implementó un mecanismo de **Retry** (2 intentos) y **Timeout** (2s) para resiliencia en la llamada de Inventario a Productos.
-3. **Seguridad**: Autenticación simple mediante **API Key** (`X-API-Key`) configurada en variables de entorno.
+3. **Seguridad**: Autenticación mediante **JWT (JSON Web Tokens)**. Se requiere un token Bearer válido para acceder a los endpoints protegidos.
 4. **Endpoint de Compra en Inventario**: Se ubicó en el microservicio de Inventario porque es la "Fuente de Verdad" del stock. La compra es una operación que modifica principalmente el estado del inventario (resta stock). Validar el producto es una pre-condición. Esto respeta el principio de **Single Responsibility**.
-5. **API Gateway**: Se incluye un gateway liviano (Nginx) para enrutar `/products/*` hacia `ms-products` y `/inventory/*` hacia `ms-inventory`, manteniendo los microservicios independientes y aplicando el header `X-API-Key` de extremo a extremo.
+5. **API Gateway**: Se incluye un gateway liviano (Nginx) para enrutar `/products/*` hacia `ms-products` y `/inventory/*` hacia `ms-inventory`, manteniendo los microservicios independientes.
 
 ## Flujo de Compra
 
@@ -190,7 +166,7 @@ sequenceDiagram
     participant DB as Postgres
 
     Client->>InventoryMS: POST /api/v1/purchases
-    InventoryMS->>ProductsMS: GET /api/v1/products/{id} (X-API-Key)
+    InventoryMS->>ProductsMS: GET /api/v1/products/{id}
     alt Product Not Found
         ProductsMS-->>InventoryMS: 404 Not Found
         InventoryMS-->>Client: 404 Product Not Found
