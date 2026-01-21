@@ -131,7 +131,7 @@ El servicio de SonarQube se inicia automáticamente con `docker-compose`.
 
 1. **Base de Datos**: Se utiliza **PostgreSQL** ejecutado en Docker. Se eligió por robustez y consistencia de datos. Cada microservicio tiene su propio esquema/base de datos lógica (`products_db`, `inventory_db`) aunque comparten instancia por simplicidad en docker-compose.
 2. **Comunicación**: HTTP síncrono utilizando `RestClient` (Spring 6). Se implementó un mecanismo de **Retry** (2 intentos) y **Timeout** (2s) para resiliencia en la llamada de Inventario a Productos.
-3. **Seguridad**: Autenticación mediante **JWT (JSON Web Tokens)**. Se requiere un token Bearer válido para acceder a los endpoints protegidos.
+3. **Seguridad**: Autenticación mediante **API Key**. Se requiere el header `X-API-Key` con un valor válido para acceder a los endpoints protegidos.
 4. **Endpoint de Compra en Inventario**: Se ubicó en el microservicio de Inventario porque es la "Fuente de Verdad" del stock. La compra es una operación que modifica principalmente el estado del inventario (resta stock). Validar el producto es una pre-condición. Esto respeta el principio de **Single Responsibility**.
 5. **API Gateway**: Se incluye un gateway liviano (Nginx) para enrutar `/products/*` hacia `ms-products` y `/inventory/*` hacia `ms-inventory`, manteniendo los microservicios independientes.
 
@@ -159,12 +159,12 @@ graph TD
         subgraph "Capa Privada (Aplicación)"
             subgraph "ms-products"
                 ProdService["📦 Product Service<br/>(Spring Boot 3)"]:::private
-                ProdSec["🔐 JWT Filter"]:::private
+                ProdSec["🔐 API Key Filter"]:::private
             end
 
             subgraph "ms-inventory"
                 InvService["📝 Inventory Service<br/>(Spring Boot 3)"]:::private
-                InvSec["🔐 JWT Filter"]:::private
+                InvSec["🔐 API Key Filter"]:::private
             end
         end
 
@@ -181,7 +181,7 @@ graph TD
     end
 
     %% Conexiones
-    User -->|HTTP JSON:API<br/>Bearer Token| Nginx
+    User -->|HTTP JSON:API<br/>X-API-Key| Nginx
     
     Nginx -->|"/products/*"| ProdService
     Nginx -->|"/inventory/*"| InvService
@@ -227,7 +227,7 @@ sequenceDiagram
     participant ProductsMS as MS Products
     participant DB as Postgres
 
-    Client->>InventoryMS: POST /api/v1/purchases
+    Client->>InventoryMS: POST /api/v1/purchases<br/>(Header: X-API-Key)
     InventoryMS->>ProductsMS: GET /api/v1/products/{id}
     alt Product Not Found
         ProductsMS-->>InventoryMS: 404 Not Found
