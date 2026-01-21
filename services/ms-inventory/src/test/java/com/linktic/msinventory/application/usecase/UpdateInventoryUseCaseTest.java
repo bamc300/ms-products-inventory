@@ -1,6 +1,8 @@
 package com.linktic.msinventory.application.usecase;
 
+import com.linktic.msinventory.domain.event.InventoryChangedEvent;
 import com.linktic.msinventory.domain.model.Inventory;
+import com.linktic.msinventory.domain.port.out.EventPublisherPort;
 import com.linktic.msinventory.domain.port.out.InventoryRepositoryPort;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -19,6 +22,9 @@ class UpdateInventoryUseCaseTest {
 
   @Mock
   private InventoryRepositoryPort inventoryRepository;
+
+  @Mock
+  private EventPublisherPort eventPublisher;
 
   @InjectMocks
   private UpdateInventoryUseCaseImpl useCase;
@@ -33,6 +39,7 @@ class UpdateInventoryUseCaseTest {
 
     assertEquals(productId, result.getProductId());
     assertEquals(5, result.getCantidad());
+    verify(eventPublisher).publish(any(InventoryChangedEvent.class));
   }
 
   @Test
@@ -45,5 +52,6 @@ class UpdateInventoryUseCaseTest {
     Inventory result = useCase.updateStock(productId, 4);
 
     assertEquals(7, result.getCantidad());
+    verify(eventPublisher).publish(any(InventoryChangedEvent.class));
   }
 }

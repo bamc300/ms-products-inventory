@@ -1,12 +1,15 @@
 package com.linktic.msinventory.application.usecase;
 
+import com.linktic.msinventory.domain.event.InventoryChangedEvent;
 import com.linktic.msinventory.domain.exception.InsufficientStockException;
 import com.linktic.msinventory.domain.exception.ProductNotFoundException;
 import com.linktic.msinventory.domain.model.Inventory;
 import com.linktic.msinventory.domain.model.Purchase;
 import com.linktic.msinventory.domain.port.in.PurchaseUseCase;
+import com.linktic.msinventory.domain.port.out.EventPublisherPort;
 import com.linktic.msinventory.domain.port.out.InventoryRepositoryPort;
 import com.linktic.msinventory.domain.port.out.ProductClientPort;
+import com.linktic.msinventory.domain.port.out.PurchaseRepositoryPort;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,8 @@ public class PurchaseUseCaseImpl implements PurchaseUseCase {
 
   private final InventoryRepositoryPort inventoryRepository;
   private final ProductClientPort productClient;
+  private final PurchaseRepositoryPort purchaseRepository;
+  private final EventPublisherPort eventPublisher;
 
   @Override
   @Transactional
@@ -31,9 +36,7 @@ public class PurchaseUseCaseImpl implements PurchaseUseCase {
     productClient.getProductById(productId)
         .orElseThrow(() -> new ProductNotFoundException(productId));
 
-    // 2. Get Inventory (or default to 0 if not exists, though strictly 404 might be better if
-    // inventory record doesn't exist, but prompt implies validation logic)
-    // If inventory record doesn't exist, stock is 0.
+    // 2. Get Inventory
     Inventory inventory = inventoryRepository.findByProductId(productId)
         .orElse(Inventory.builder().productId(productId).cantidad(0).build());
 
@@ -47,8 +50,25 @@ public class PurchaseUseCaseImpl implements PurchaseUseCase {
     inventory.setCantidad(inventory.getCantidad() - quantity);
     inventoryRepository.save(inventory);
 
-    // 5. Return Purchase
-    return Purchase.builder().purchaseId(UUID.randomUUID()).productId(productId)
-        .cantidadComprada(quantity).timestamp(LocalDateTime.now()).build();
+    // 5. Create Purchase
+    Purchase purchase = Purchase.builder()
+        .purchaseId(UUID.randomUUID())
+        .productId(productId)
+        .cantidadComprada(quantity)
+        .timestamp(LocalDateTime.now())
+        .build();
+
+    // 6. Save Purchase History
+    Purchase savedPurchase = purchaseRepository.save(purchase);
+
+    // 7. Publish Inventory Changed Event
+    eventPublisher.publish(InventoryChangedEvent.builder()
+        .productId(productId)
+        .newQuantity(inventory.getCantidad())
+        .timestamp(LocalDateTime.now())
+        .reason("Purchase")
+        .build());
+
+    return savedPurchase;
   }
 }
