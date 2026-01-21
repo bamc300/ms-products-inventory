@@ -27,4 +27,11 @@ public class ProductRepositoryAdapter implements ProductRepositoryPort {
   public Optional<Product> findById(UUID id) {
     return repository.findById(id).map(mapper::toDomain);
   }
+
+  @Override
+  public java.util.List<Product> findAll() {
+    return repository.findAll().stream()
+        .map(mapper::toDomain)
+        .toList();
+  }
 }

@@ -1,10 +1,12 @@
 package com.linktic.msproducts.infrastructure.adapter.in;
 
 import com.linktic.msproducts.application.dto.CreateProductRequestDto;
+import com.linktic.msproducts.application.dto.ProductListResponseDto;
 import com.linktic.msproducts.application.dto.ProductResponseDto;
 import com.linktic.msproducts.application.mapper.ProductDtoMapper;
 import com.linktic.msproducts.domain.model.Product;
 import com.linktic.msproducts.domain.port.in.CreateProductUseCase;
+import com.linktic.msproducts.domain.port.in.GetAllProductsUseCase;
 import com.linktic.msproducts.domain.port.in.GetProductByIdUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
+import java.util.List;
 
 /**
  * Controlador REST para la gestión de productos. Provee endpoints para crear y consultar productos.
@@ -34,6 +37,7 @@ public class ProductController {
 
   private final CreateProductUseCase createProductUseCase;
   private final GetProductByIdUseCase getProductByIdUseCase;
+  private final GetAllProductsUseCase getAllProductsUseCase;
   private final ProductDtoMapper mapper;
 
   @PostMapping(consumes = "application/vnd.api+json", produces = "application/vnd.api+json")
@@ -56,5 +60,23 @@ public class ProductController {
   public ResponseEntity<ProductResponseDto> getProductById(@PathVariable UUID id) {
     Product product = getProductByIdUseCase.getProductById(id);
     return ResponseEntity.ok(mapper.toResponse(product));
+  }
+
+  @GetMapping(produces = "application/vnd.api+json")
+  @Operation(summary = "Get all products")
+  @ApiResponse(responseCode = "200", description = "List of all products",
+      content = @Content(mediaType = "application/vnd.api+json",
+          schema = @Schema(implementation = ProductListResponseDto.class)))
+  public ResponseEntity<ProductListResponseDto> getAllProducts() {
+    List<Product> products = getAllProductsUseCase.getAllProducts();
+    
+    List<ProductResponseDto.ProductData> productsData = products.stream()
+        .map(mapper::toResponse)
+        .map(ProductResponseDto::getData)
+        .toList();
+
+    return ResponseEntity.ok(ProductListResponseDto.builder()
+        .data(productsData)
+        .build());
   }
 }

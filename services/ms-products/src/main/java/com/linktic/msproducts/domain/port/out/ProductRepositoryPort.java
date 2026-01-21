@@ -8,4 +8,6 @@ public interface ProductRepositoryPort {
   Product save(Product product);
 
   Optional<Product> findById(UUID id);
+
+  java.util.List<Product> findAll();
 }
