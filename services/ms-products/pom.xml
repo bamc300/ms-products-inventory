@@ -85,6 +85,16 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.11</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/application/dto/**</exclude>
+                        <exclude>**/domain/model/**</exclude>
+                        <exclude>**/domain/exception/**</exclude>
+                        <exclude>**/infrastructure/adapter/config/**</exclude>
+                        <exclude>**/infrastructure/adapter/out/persistence/entity/**</exclude>
+                        <exclude>**/MsProductsApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
