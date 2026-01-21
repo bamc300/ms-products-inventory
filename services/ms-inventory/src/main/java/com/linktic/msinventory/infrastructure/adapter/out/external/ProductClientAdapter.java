@@ -1,5 +1,6 @@
 package com.linktic.msinventory.infrastructure.adapter.out.external;
 
+import com.linktic.msinventory.domain.exception.ExternalServiceException;
 import com.linktic.msinventory.domain.port.out.ProductClientPort;
 import com.linktic.msinventory.domain.port.out.ProductClientPort.ProductDto;
 import org.springframework.beans.factory.annotation.Value;
