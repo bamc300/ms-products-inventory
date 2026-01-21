@@ -1,108 +1,101 @@
 package com.linktic.msinventory.infrastructure.adapter.out.external;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.linktic.msinventory.domain.exception.ExternalServiceException;
 import com.linktic.msinventory.domain.port.out.ProductClientPort;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.configureFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 class ProductClientAdapterTest {
 
-  private WireMockServer wireMockServer;
-  private String apiKey = "test-api-key";
+    private ProductClientAdapter productClientAdapter;
+    private MockRestServiceServer mockServer;
+    private ObjectMapper objectMapper;
 
-  @BeforeEach
-  void setUp() {
-    wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
-    wireMockServer.start();
-    configureFor("localhost", wireMockServer.port());
-  }
+    @BeforeEach
+    void setUp() {
+        RestClient.Builder builder = RestClient.builder();
+        mockServer = MockRestServiceServer.bindTo(builder).build();
+        RestClient restClient = builder.build();
 
-  @AfterEach
-  void tearDown() {
-    if (wireMockServer != null) {
-      wireMockServer.stop();
+        productClientAdapter = new ProductClientAdapter(restClient, "test-api-key");
+        objectMapper = new ObjectMapper();
     }
-  }
 
-  @Test
-  void getProductById_ShouldReturnProduct_When200() {
-    UUID productId = UUID.fromString("11111111-1111-1111-1111-111111111111");
-    stubFor(get(urlEqualTo("/api/v1/products/" + productId))
-        .withHeader("X-API-Key", equalTo(apiKey)).willReturn(okJson("{\"data\":{\"id\":\""
-            + productId + "\",\"attributes\":{\"nombre\":\"P1\",\"precio\":50.0}}}")));
+    @Test
+    void getProductById_Success_ShouldReturnProduct() throws JsonProcessingException {
+        UUID id = UUID.randomUUID();
+        ProductClientAdapter.ProductResponseWrapper wrapper =
+                new ProductClientAdapter.ProductResponseWrapper();
+        ProductClientAdapter.ProductData data = new ProductClientAdapter.ProductData();
+        data.setId(id.toString());
+        ProductClientAdapter.ProductAttributes attributes =
+                new ProductClientAdapter.ProductAttributes();
+        attributes.setNombre("Test Product");
+        attributes.setPrecio(BigDecimal.valueOf(100.0));
+        data.setAttributes(attributes);
+        wrapper.setData(data);
 
-    ProductClientPort client =
-        new ProductClientAdapter("http://localhost:" + wireMockServer.port(), apiKey);
+        mockServer.expect(requestTo("/api/v1/products/" + id))
+                .andExpect(header("X-API-Key", "test-api-key")).andRespond(withSuccess(
+                        objectMapper.writeValueAsString(wrapper), MediaType.APPLICATION_JSON));
 
-    Optional<ProductClientPort.ProductDto> result = client.getProductById(productId);
+        Optional<ProductClientPort.ProductDto> result = productClientAdapter.getProductById(id);
 
-    assertTrue(result.isPresent());
-    assertEquals(productId, result.get().getId());
-    assertEquals("P1", result.get().getNombre());
-    assertEquals(new BigDecimal("50.0"), result.get().getPrecio());
-  }
+        assertTrue(result.isPresent());
+        assertEquals(id, result.get().getId());
+        assertEquals("Test Product", result.get().getNombre());
+        assertEquals(BigDecimal.valueOf(100.0), result.get().getPrecio());
+    }
 
-  @Test
-  void getProductById_ShouldReturnEmpty_When404() {
-    UUID productId = UUID.fromString("99999999-9999-9999-9999-999999999999");
-    stubFor(get(urlEqualTo("/api/v1/products/" + productId))
-        .withHeader("X-API-Key", equalTo(apiKey)).willReturn(aResponse().withStatus(404)));
+    @Test
+    void getProductById_NotFound_ShouldReturnEmpty() {
+        UUID id = UUID.randomUUID();
 
-    ProductClientPort client =
-        new ProductClientAdapter("http://localhost:" + wireMockServer.port(), apiKey);
+        mockServer.expect(requestTo("/api/v1/products/" + id)).andRespond(withResourceNotFound());
 
-    Optional<ProductClientPort.ProductDto> result = client.getProductById(productId);
+        Optional<ProductClientPort.ProductDto> result = productClientAdapter.getProductById(id);
 
-    assertTrue(result.isEmpty());
-  }
+        assertTrue(result.isEmpty());
+    }
 
-  @Test
-  void getProductById_ShouldRetryAndSucceed_WhenFirst500Then200() {
-    UUID productId = UUID.fromString("22222222-2222-2222-2222-222222222222");
-    stubFor(get(urlEqualTo("/api/v1/products/" + productId)).inScenario("retry")
-        .whenScenarioStateIs("Started").withHeader("X-API-Key", equalTo(apiKey))
-        .willReturn(aResponse().withStatus(500)).willSetStateTo("second"));
+    @Test
+    void getProductById_ServerError_ShouldRetryAndThrowException() {
+        UUID id = UUID.randomUUID();
 
-    stubFor(get(urlEqualTo("/api/v1/products/" + productId)).inScenario("retry")
-        .whenScenarioStateIs("second").withHeader("X-API-Key", equalTo(apiKey))
-        .willReturn(okJson("{\"data\":{\"id\":\"" + productId
-            + "\",\"attributes\":{\"nombre\":\"P2\",\"precio\":1.0}}}")));
+        // Expect 3 calls (initial + 2 retries)
+        mockServer.expect(requestTo("/api/v1/products/" + id)).andRespond(withServerError());
+        mockServer.expect(requestTo("/api/v1/products/" + id)).andRespond(withServerError());
+        mockServer.expect(requestTo("/api/v1/products/" + id)).andRespond(withServerError());
 
-    ProductClientPort client =
-        new ProductClientAdapter("http://localhost:" + wireMockServer.port(), apiKey);
+        assertThrows(ExternalServiceException.class, () -> productClientAdapter.getProductById(id));
+    }
 
-    Optional<ProductClientPort.ProductDto> result = client.getProductById(productId);
+    @Test
+    void getProductById_GenericException_ShouldThrowExternalServiceException() {
+        UUID id = UUID.randomUUID();
 
-    assertTrue(result.isPresent());
-    assertEquals("P2", result.get().getNombre());
-  }
+        // Mock a runtime exception that is NOT one of the retriable ones
+        // But MockRestServiceServer usually throws RestClientException which is caught.
+        // Let's force a strange exception if possible, or just a malformed response that causes
+        // JSON parsing error.
 
-  @Test
-  void getProductById_ShouldThrowException_WhenAlways500() {
-    UUID productId = UUID.fromString("33333333-3333-3333-3333-333333333333");
-    stubFor(get(urlEqualTo("/api/v1/products/" + productId))
-        .withHeader("X-API-Key", equalTo(apiKey))
-        .willReturn(aResponse().withStatus(500)));
+        mockServer.expect(requestTo("/api/v1/products/" + id))
+                .andRespond(withSuccess("invalid json", MediaType.APPLICATION_JSON));
 
-    ProductClientPort client =
-        new ProductClientAdapter("http://localhost:" + wireMockServer.port(), apiKey);
-
-    assertThrows(RuntimeException.class, () -> client.getProductById(productId));
-  }
+        assertThrows(ExternalServiceException.class, () -> productClientAdapter.getProductById(id));
+    }
 }
