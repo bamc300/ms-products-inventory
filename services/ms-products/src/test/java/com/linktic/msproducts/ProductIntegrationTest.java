@@ -24,71 +24,91 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class ProductIntegrationTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    private String apiKey;
+        private String apiKey;
 
-    @BeforeEach
-    void setUp() {
-        apiKey = "inventory-microservices-api-key-12345";
-    }
+        @BeforeEach
+        void setUp() {
+                apiKey = "inventory-microservices-api-key-12345";
+        }
 
-    @Test
-    void createProduct_ShouldReturn201() throws Exception {
-        CreateProductRequestDto request = CreateProductRequestDto.builder()
-                .data(CreateProductRequestDto.ProductData.builder().type("products")
-                        .attributes(CreateProductRequestDto.ProductAttributes
-                                .builder()
-                                .nombre("Integration Product")
-                                .precio(new BigDecimal("99.99"))
-                                .descripcion("Desc").build())
-                        .build())
-                .build();
+        @Test
+        void getAllProducts_ShouldReturn200() throws Exception {
+                CreateProductRequestDto request = CreateProductRequestDto.builder()
+                                .data(CreateProductRequestDto.ProductData.builder().type("products")
+                                                .attributes(CreateProductRequestDto.ProductAttributes
+                                                                .builder().nombre("List Product")
+                                                                .precio(new BigDecimal("10.00"))
+                                                                .descripcion("Desc").build())
+                                                .build())
+                                .build();
 
-        mockMvc.perform(post("/api/v1/products").header("X-API-Key", apiKey)
-                .contentType("application/vnd.api+json")
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.type").value("products"))
-                .andExpect(jsonPath("$.data.attributes.nombre")
-                        .value("Integration Product"));
-    }
+                mockMvc.perform(post("/api/v1/products").header("X-API-Key", apiKey)
+                                .contentType("application/vnd.api+json")
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isCreated());
 
-    @Test
-    void getProduct_ShouldReturn200_WhenExists() throws Exception {
-        CreateProductRequestDto request = CreateProductRequestDto.builder()
-                .data(CreateProductRequestDto.ProductData.builder().type("products")
-                        .attributes(CreateProductRequestDto.ProductAttributes
-                                .builder().nombre("Get Product")
-                                .precio(new BigDecimal("10.00"))
-                                .descripcion("Desc").build())
-                        .build())
-                .build();
+                mockMvc.perform(get("/api/v1/products").header("X-API-Key", apiKey))
+                                .andExpect(status().isOk()).andExpect(jsonPath("$.data").isArray());
+        }
 
-        MvcResult created = mockMvc
-                .perform(post("/api/v1/products").header("X-API-Key", apiKey)
-                        .contentType("application/vnd.api+json")
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated()).andReturn();
+        @Test
+        void createProduct_ShouldReturn201() throws Exception {
+                CreateProductRequestDto request = CreateProductRequestDto.builder()
+                                .data(CreateProductRequestDto.ProductData.builder().type("products")
+                                                .attributes(CreateProductRequestDto.ProductAttributes
+                                                                .builder()
+                                                                .nombre("Integration Product")
+                                                                .precio(new BigDecimal("99.99"))
+                                                                .descripcion("Desc").build())
+                                                .build())
+                                .build();
 
-        JsonNode createdJson =
-                objectMapper.readTree(created.getResponse().getContentAsString());
-        String id = createdJson.path("data").path("id").asText();
+                mockMvc.perform(post("/api/v1/products").header("X-API-Key", apiKey)
+                                .contentType("application/vnd.api+json")
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.data.type").value("products"))
+                                .andExpect(jsonPath("$.data.attributes.nombre")
+                                                .value("Integration Product"));
+        }
 
-        mockMvc.perform(get("/api/v1/products/{id}", id).header("X-API-Key", apiKey))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(id))
-                .andExpect(jsonPath("$.data.attributes.nombre")
-                        .value("Get Product"));
-    }
+        @Test
+        void getProduct_ShouldReturn200_WhenExists() throws Exception {
+                CreateProductRequestDto request = CreateProductRequestDto.builder()
+                                .data(CreateProductRequestDto.ProductData.builder().type("products")
+                                                .attributes(CreateProductRequestDto.ProductAttributes
+                                                                .builder().nombre("Get Product")
+                                                                .precio(new BigDecimal("10.00"))
+                                                                .descripcion("Desc").build())
+                                                .build())
+                                .build();
 
-    @Test
-    void getProduct_ShouldReturn404_WhenNotFound() throws Exception {
-        mockMvc.perform(get("/api/v1/products/{id}", "99999999-9999-9999-9999-999999999999")
-                .header("X-API-Key", apiKey)).andExpect(status().isNotFound());
-    }
+                MvcResult created = mockMvc
+                                .perform(post("/api/v1/products").header("X-API-Key", apiKey)
+                                                .contentType("application/vnd.api+json")
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isCreated()).andReturn();
+
+                JsonNode createdJson =
+                                objectMapper.readTree(created.getResponse().getContentAsString());
+                String id = createdJson.path("data").path("id").asText();
+
+                mockMvc.perform(get("/api/v1/products/{id}", id).header("X-API-Key", apiKey))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.id").value(id))
+                                .andExpect(jsonPath("$.data.attributes.nombre")
+                                                .value("Get Product"));
+        }
+
+        @Test
+        void getProduct_ShouldReturn404_WhenNotFound() throws Exception {
+                mockMvc.perform(get("/api/v1/products/{id}", "99999999-9999-9999-9999-999999999999")
+                                .header("X-API-Key", apiKey)).andExpect(status().isNotFound());
+        }
 }
