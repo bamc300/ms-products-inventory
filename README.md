@@ -246,6 +246,31 @@ sequenceDiagram
     end
 ```
 
+## Mejoras Futuras y Escalabilidad
+
+Para llevar este sistema a un entorno de producción de alta escala, se proponen las siguientes mejoras:
+
+1.  **Seguridad Avanzada (OAuth2/OIDC + JWT)**:
+    - Migrar de API Keys a un flujo estándar de OAuth2 con JWT. Esto permite una gestión de identidad centralizada (Keycloak/Auth0), scopes granulares y mejor seguridad para clientes públicos (SPA/Mobile).
+
+2.  **Comunicación Asíncrona (Event-Driven Architecture)**:
+    - Reemplazar la comunicación síncrona actual (o complementarla) con un Broker de Mensajes como **RabbitMQ** o **Kafka**.
+    - Ejemplo: Al crear una compra, publicar un evento `PurchaseCreated` en una cola. Servicios de Facturación, Notificaciones o Analytics pueden consumir este evento sin afectar la latencia del usuario.
+
+3.  **Resiliencia y Tolerancia a Fallos**:
+    - Implementar **Circuit Breakers** (Resilience4j) más robustos para evitar fallos en cascada cuando un microservicio dependiente está caído.
+    - Añadir **Rate Limiting** en el Gateway para proteger el sistema de picos de tráfico.
+
+4.  **Observabilidad Distribuida**:
+    - Integrar **OpenTelemetry** con herramientas como Zipkin o Jaeger para visualizar la traza completa de una petición a través de todos los microservicios, complementando los logs actuales con MDC.
+
+5.  **Caché Distribuido (Redis)**:
+    - Implementar una capa de caché para datos de lectura frecuente y baja mutabilidad (como el catálogo de productos) para reducir la carga en la base de datos.
+
+6.  **Orquestación y Configuración**:
+    - Migrar de Docker Compose a **Kubernetes (K8s)** para auto-escalado, self-healing y gestión de despliegues.
+    - Utilizar **Spring Cloud Config** o **Consul** para externalizar y centralizar la configuración de todos los microservicios.
+
 ## Uso de IA
 
 Se utilizó un asistente de IA como **herramienta de apoyo y copiloto** durante el desarrollo, desempeñando los siguientes roles:
